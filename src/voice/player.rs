@@ -71,7 +71,8 @@ impl Actor for Player {
 
     async fn on_start(args: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
         let player = Player::new(args, actor_ref.downgrade()).await?;
-        player.internal.players.insert(player.guild_id, actor_ref);
+        // Player is now registered in the DashMap by PlayerManager before spawning
+        // to avoid race condition where get_player fails immediately after creation
         tracing::debug!("New Player Task spawned for GuildId: [{}]", player.guild_id);
         Ok(player)
     }

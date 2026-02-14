@@ -49,16 +49,25 @@ impl PlayerManager {
                 .await?;
             return Ok(());
         }
-        let options = PlayerOptions {
+        let guild_id = options.guild_id.clone();
+        let player_options = PlayerOptions {
             websocket: self.websocket.clone(),
             config: options.config,
             user_id: self.user_id,
-            guild_id: options.guild_id.clone(),
+            guild_id: guild_id.clone(),
             server_update: options.server_update,
             players: self.players.clone(),
         };
-        Player::spawn(options).wait_for_startup_result().await?;
-        Ok(())
+        
+        let player_ref = Player::spawn(player_options);
+        self.players.insert(guild_id.clone(), player_ref.clone());
+        match player_ref.wait_for_startup_result().await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                self.players.remove(&guild_id);
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn destroy_player(&self, guild_id: &GuildId) {
